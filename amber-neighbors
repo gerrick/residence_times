@@ -1,0 +1,116 @@
+#!/usr/bin/perl
+die "expecting input of form ./exe [amber prmtop] [amber mdcrd trj] [atom 1] [atom 2] [distance cutoff A]" unless (@ARGV==5) && (-e $ARGV[0]) && (-e $ARGV[1]);
+$cut=pop @ARGV;$id2=pop @ARGV;$id1=pop @ARGV;$mdcrd=pop @ARGV;$prmtop=pop @ARGV;
+print STDERR "id1 is $id1, id2 is $id2, the cutoff is $cut, the mdcrd is $mdcrd and the prmtop is $prmtop\n";
+$numref=0;
+system "rm -f myoutput-1.*";
+#process the prmtop
+@ARGV=();@ARGV[0]=($prmtop);
+while(<>){
+        if($_=~/%FLAG POINTERS/){
+                $_=<>; $_=<>;$num=(split(/\s+/,$_))[1]; print STDERR "the number of atoms is $num\n";
+        }elsif($_=~/%FLAG ATOM_NAME/){
+                $_=<>;$count=0;
+                until($count==$num){
+                        $_=<>;chomp;@whole_line=split(//,$_);$foo=@whole_line;@line=();
+                        while ($foo>0){
+                                $foo1=shift @whole_line;
+                                $foo2=shift @whole_line;
+                                $foo3=shift @whole_line;
+                                $foo4=shift @whole_line;
+                                $foo5=join "",$foo1,$foo2,$foo3,$foo4;
+                                @foo6=grep length,split(/\s+/,$foo5);
+                                $foo7=$foo6[0];
+                                push @line,$foo7;
+                                $foo=@whole_line;
+                        };
+                        foreach $aoo(@line){
+                                $count++;
+                                if($id1=~/$aoo/){ #found a species #1
+                                        #print STDERR "# $count, $aoo is a match for $id1\n";
+                                        $id1count++;
+                                        push @id1_ids,$count;
+                                }elsif($id2=~/$aoo/){ #found a species #2
+                                        #print STDERR "# $count, $aoo is a match for $id2\n";
+                                        $id2count++;
+                                        push @id2_ids,$count;
+                                };
+                        };
+                };
+                print STDERR "there are $id1count of $id1 and $id2count of $id2\n";
+                die "didn't find any $id1 or maybe $id2, check the names in $prmtop" if (($id1count==0) || ($id2count==0));
+        };
+};
+#process the mdcrd
+@ARGV=();@ARGV[0]=($mdcrd);$_=<>;
+$limit=`tail -1 $mdcrd`;
+($_,$x,$y,$z)=split(/\s+/,$limit);print STDERR "the boxlengths are $x $y $z\n";
+while (<>){
+        $time++;
+        @xyzs=();
+        until($_==$limit){
+                @line=split(/\s+/,$_);shift @line;push @xyzs,@line;
+                $_=<>;
+        };
+        #print "@xyzs[-1]\n"; #the last coordinate
+        #$count=@xyzs;  #print STDERR "there are $count xyzs and so there are ",$count/$num," per atom\n";
+        $count=0;$coordid1=0;$coordid2=0;
+        #Have read in the coords, now need to pick out all id1 and id2, then search for pairings
+        foreach $aoo(1..$num){
+                $count++; $new1=0; $new2=0;
+                $id_temp=$count;
+                $x_temp=shift @xyzs;
+                $y_temp=shift @xyzs;
+                $z_temp=shift @xyzs;
+                foreach $boo(@id1_ids){ #look if this atom is type 1
+                        if($count==$boo){
+                                $coordid1++;$new1++;
+                                #print STDERR "$count is a #1, and the $coordid1 one at that\n";
+                                push @id_1,$id_temp; #store the id
+                                push @x_1,$x_temp; #store x
+                                push @y_1,$y_temp; #store y
+                                push @z_1,$z_temp; #store z
+                        };
+                };
+                foreach $boo(@id2_ids){ #look if this atom is type 2
+                        if($count==$boo){
+                                $coordid2++;$new2++;die "one atom can't be two things" if ($new1==1);
+                                #print STDERR "$count is a #2, and the $coordid2 one at that\n";
+                                push @id_2,$id_temp; #store the id
+                                push @x_2,$x_temp; #store x
+                                push @y_2,$y_temp; #store y
+                                push @z_2,$z_temp; #store z
+                        };
+                };
+        };
+        print STDERR "found a total of $coordid1 1's and $coordid2 2's\n";
+        #now search through #1's to find all #2 partners
+        foreach $aoo(0..($coordid1-1)){
+                foreach $boo(0..($coordid2-1)){
+                        $dx=$x_1[$aoo]-$x_2[$boo];
+                        $dy=$y_1[$aoo]-$y_2[$boo];
+                        $dz=$z_1[$aoo]-$z_2[$boo];
+                        $d=sqrt($dx*$dx+$dy*$dy+$dz*$dz);
+                        #print STDERR "$aoo $boo $id_1[$aoo] $id_2[$boo] ($x_1[$aoo] $y_1[$aoo] $z_1[$aoo]) ($x_2[$boo] $y_2[$boo] $z_2[$boo]) $dx $dy $dz $d "; #note this print is tied to the next one, no \n here
+                        if(abs($dx)>($x/2)){ if($dx>0){$dx=$dx-$x;}else{$dx=$dx+$x;} };
+                        if(abs($dy)>($y/2)){ if($dy>0){$dy=$dy-$y;}else{$dy=$dy+$y;} };
+                        if(abs($dz)>($z/2)){ if($dz>0){$dz=$dz-$z;}else{$dz=$dz+$z;} };
+                        $d=sqrt($dx*$dx+$dy*$dy+$dz*$dz);
+                        #print STDERR "$dx $dy $dz $d\n"; #Note: this print is tied to the last one
+                        if ($d<$cut){ #a pair
+                                #print STDERR "@id_1[$aoo] @id_2[$boo] $dx $dy $dz $d\n";
+                                #die;
+                                $pairs++;
+                                push @neighbors,@id_2[$boo];
+                        };
+                };
+                $neighbors=join " ",@neighbors;
+                open(OUT,">>myoutput-1.@id_1[$aoo].dat")||die "cannot open myoutput-1.@id_1[$aoo].dat";
+                print OUT "$time $pairs $neighbors\n";
+                close OUT;
+                $pairs=0;@neighbors=();$neighbors=undef;
+        };
+        @id_1=();@x_1=();@y_1=();@z_1=();
+        @id_2=();@x_2=();@y_2=();@z_2=();
+        $id1count=0;$id2count=0;
+};
