@@ -1,0 +1,39 @@
+#!/usr/bin/perl
+
+#the point is to average the third col
+$val=0;
+while (<>){
+        @foo=split;
+        push @val,@foo[0];
+        $c++ if @foo[0]>0;
+        $ave+=@foo[0];
+};
+$ave=$ave/$c if $c>0;
+$std=0;
+foreach(@val){
+        $std+=($_-$ave)**2;
+};
+$std=sqrt($std/($c-1)) if $c>1;
+print sprintf("%4.3f",$ave)," +/- ",sprintf("%4.3f",$std),"\n";
+[gel35@wind ~/bin/res-time-tools ]$ more lammp-zeros
+#!/usr/bin/perl
+
+#this script reads in a myoutput-* type file, like produced by lammps-neighbors, and
+#add in frames that aren't there. This is for reactive simulations where proton
+#transfer leads to a change in chemical idenity.
+
+die "expecting an input file\n./exe [myoutput-file form lammps-neighbors]\n" unless (-e $ARGV[0]);
+$_=<>; print; @line=grep length, split(/\s+/,$_); $last=$line[0];
+while(<>){
+        @line=grep length, split(/\s+/,$_);
+        $t=$line[0];
+        if($t==$last+1){
+                print $_ if $t
+        }else{
+                foreach $fill ($last+1..$t-1){
+                        print "$fill 0\n";
+                };
+                print $_;
+        };
+        $last=$t;
+};
