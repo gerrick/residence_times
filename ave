@@ -1,0 +1,17 @@
+#!/usr/bin/perl
+
+#the point is to average the third col
+$val=0;
+while (<>){
+        @foo=split;
+        push @val,@foo[0];
+        $c++ if @foo[0]>0;
+        $ave+=@foo[0];
+};
+$ave=$ave/$c if $c>0;
+$std=0;
+foreach(@val){
+        $std+=($_-$ave)**2;
+};
+$std=sqrt($std/($c-1)) if $c>1;
+print sprintf("%4.3f",$ave)," +/- ",sprintf("%4.3f",$std),"\n";
