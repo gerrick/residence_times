@@ -1,0 +1,85 @@
+#!/usr/bin/perl
+
+die "file doesn't exist ./get-residence-time [file myoutput.dat from conv2xyz.tcl]" unless (-e $ARGV[0]);
+die "expecting 1 inputs ./get-residence-time [file myoutput.dat from conv2xyz.tcl]" unless (@ARGV==1);
+#vmd -dispdev text -e conv2xyz.tcl, ut remember that conv2xyz.tcl may need to be edited for the total number of frames to process
+$fc=0; #initialize frame counter
+$maxi=0;#max index for looping when checking later
+$nhn=2; #length of rattling to ignore
+$file=$ARGV[0]; chomp $file;
+$center=(split(/\./,$file))[1]; #index for the center atom
+$boo=0; #variable for the number of initial pairs at 1st step
+while(<>){
+        $line=$_;
+        chomp $line;
+        @ions=split(/\s+/,$line); #print "@ions\n";
+        $frame=shift @ions; #get the frame number
+        $flrs=shift @ions; #get the number of pairs
+#       die "counter off $fc and $frame" unless $fc==$frame; #check that the counters are lined up still
+        $fc++; #incremend frame counter for the next step
+        die "there seems to be a mismatch between the expected number of pairs and the actual number of pairs" unless (@ions==$flrs);
+        #print "debug: step $fc";
+#       print "debug pairs: @ions\n";
+        if($fc<=$nhn){ #first time through
+                foreach $index(@ions){
+                        $maxi=$index if $index>$maxi; #print "the index is $index from @ions[$doo]\n";
+                        @track[$index]=-1; #this array keeps track of how long a pair has lasted; negative means the pair existed at the 1st step & will be ignored
+                        @mod[$index]=1; #this array keeps track of if a pair was changed at this step
+                        $boo++;
+                };
+        }else{
+                foreach $index(@ions){
+                        $maxi=$index if $index>$maxi; #print "the index is $index from @ions[$doo]\n";
+                        #need to make it ignore the first and last incomplete pairs
+                        if($track[$index]!=-1){ #keep on counting or start new counter
+                                @track[$index]++; #increment the number of steps a pair has been obs
+                                @mod[$index]=1;
+                        }elsif($track[$index]==-1){ #discard any pairs present at the first step
+                                @mod[$index]=1;
+                        };
+        #               print " debug: step $fc $index has lasted @track[$index]";
+                };
+        };
+        foreach $goo(0..$maxi){
+                if (($track[$goo]>0)){ #the increment for this pair wasn't changed at this step
+                        #print "debug 1rack: $goo, $track[$goo], @mod[$goo], $delay[$goo]\n";
+                        #count to eleminate rattling
+                        if (@mod[$goo]!=1){#tracking how many steps the pair is split
+                                $delay[$goo]++;
+                                if($delay[$goo]>=$nhn){
+                                        print "$track[$goo] # $center $goo\n";
+                                        $track[$goo]=0;
+                                        $delay[$goo]=0;
+                                };
+                        }else{#the pair is reformed
+                                $track[$goo]=$track[$goo]+$delay[$goo]; #add in the rattle time
+                                $delay[$goo]=0;
+                        };
+                }elsif(($track[$goo]<0)){ #ignore any initial pairs
+                        #print "debug 2rack: $goo, $track[$goo], @mod[$goo], $delay[$goo]\n";
+                        if (@mod[$goo]!=1){#tracking how many steps the pair is split
+                                $delay[$goo]++;
+                                if($delay[$goo]>=$nhn){
+                                        #print "$track[$goo] # $center $goo\n";
+                                        $track[$goo]=0;
+                                        $delay[$goo]=0;
+                                };
+                        }else{#the pair is reformed
+                                #$track[$goo]=$track[$goo]+$delay[$goo]; #add in the rattle time
+                                $delay[$goo]=0;
+                        };
+                };
+        };
+        @mod=(); #reset to track which pairs have been modified at a given step
+#       print "\n";
+};
+foreach $goo(0..$maxi){
+        $doo=0; #variable for number of pairs remaining at the end
+        if ($track[$goo]>0){
+                $doo++;
+        };
+};
+#print STDERR "there were $boo pairs at the beginning and $doo pairs remaining at the end\n";
+
+#print $file," ",$sum/$denom,"\n";
+
