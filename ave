@@ -1,6 +1,4 @@
 #!/usr/bin/perl
-
-#the point is to average the third col
 $val=0;
 while (<>){
         @foo=split;
