@@ -1,5 +1,9 @@
 # residence_times
 
+May 16 2019
+
+Added amber-neighbors.npt to handle the neighbor search for npt simulations
+
 may 8 2019
 
 Importing all of these on github. 
