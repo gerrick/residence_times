@@ -1,5 +1,11 @@
 # residence_times
 
+may 19 2019
+
+Added same-type-amber-neighbors.npt which calculates te residence time between pairs of one atom type. The useage is something like this: 
+
+./same-type-amber-neighbors.npt ../cho_ger.parm7 ../mdcrd.crd N1 12.0
+
 May 16 2019
 
 Added amber-neighbors.npt to handle the neighbor search for npt simulations
