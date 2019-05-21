@@ -1,15 +1,13 @@
 #!/usr/bin/perl
-$val=0;
+$ave=0;$avesqr=0;
 while (<>){
         @foo=split;
         push @val,@foo[0];
         $c++ if @foo[0]>0;
         $ave+=@foo[0];
+        $avesqr+=@foo[0]**2;
 };
 $ave=$ave/$c if $c>0;
-$std=0;
-foreach(@val){
-        $std+=($_-$ave)**2;
-};
-$std=sqrt($std/($c-1)) if $c>1;
-print sprintf("%4.3f",$ave)," +/- ",sprintf("%4.3f",$std),"\n";
+$avesqr=sqrt($avesqr/$c-$ave**2) if $c>0;
+$avesqr=$avesqr/sqrt($c) if $c>0;
+print sprintf("%4.3f",$ave)," +/- ",sprintf("%4.3f",$avesqr),"\n";
