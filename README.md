@@ -11,9 +11,14 @@ cutoff from the RDF between the two atoms/particles/sites you're looking at. You
 or netcdf, which you can convert to crd with cpptraj using commands like this: 
 
 parm *.parm7
+
 trajin mdcrd
+
 trajout mdcrd.crd
+
 go
+
+exit
 
 You will also need to run an radial distribution function calculation. If you're looking at species "N1" and "C2", then calculate the N1 to C2 rdf.
 You will need the first minimum in their distribution (to capture the whole first solvation shell or the first hill in the rdf). CAUTION: This 
